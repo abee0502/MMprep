@@ -5,6 +5,11 @@ import random
 def run_practice_mode(flashcards):
     total = len(flashcards)
 
+    # Handle empty question set
+    if total == 0:
+        st.error("⚠️ No flashcards found. Please check your questions.json.")
+        st.stop()
+
     # Session state initialization
     if 'answered_ids' not in st.session_state:
         st.session_state.answered_ids = set()
@@ -14,18 +19,18 @@ def run_practice_mode(flashcards):
         st.session_state.question_order = list(range(total))
         random.shuffle(st.session_state.question_order)
 
-    # Filter for unanswered questions
+    # Filter unanswered
     unanswered_ids = [i for i in st.session_state.question_order if i not in st.session_state.answered_ids]
 
-    # 🛡 Fix: Avoid ZeroDivisionError by stopping after reset
-    if not unanswered_ids:
+    # 🛡 Handle completed session — only if at least one question answered
+    if not unanswered_ids and len(st.session_state.answered_ids) > 0:
         st.success("🎉 You've answered all questions! Restarting practice session.")
         st.session_state.answered_ids = set()
         random.shuffle(st.session_state.question_order)
         st.session_state.practice_index = 0
-        st.stop()  # Prevent execution on empty unanswered_ids
+        st.stop()
 
-    # Current question index
+    # Safe current index
     idx = unanswered_ids[st.session_state.practice_index % len(unanswered_ids)]
     card = flashcards[idx]
 
