@@ -7,6 +7,13 @@ from review_mode import run_review_mode
 from full_review_mode import run_full_review_mode
 
 def main():
+    # ✅ Initialize persistent session state once
+    if "initialized" not in st.session_state:
+        st.session_state.answered_ids = set()
+        st.session_state.practice_index = 0
+        st.session_state.question_order = []
+        st.session_state.initialized = True
+
     st.set_page_config(page_title="SAP Flashcard App", layout="wide")
     st.title("📘 SAP Flashcard Practice App")
 
