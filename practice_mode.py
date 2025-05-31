@@ -17,13 +17,13 @@ def run_practice_mode(flashcards):
     # Filter for unanswered questions
     unanswered_ids = [i for i in st.session_state.question_order if i not in st.session_state.answered_ids]
 
-    # 🛡 Fix ZeroDivisionError by resetting once all questions are answered
+    # 🛡 Fix: Avoid ZeroDivisionError by stopping after reset
     if not unanswered_ids:
         st.success("🎉 You've answered all questions! Restarting practice session.")
         st.session_state.answered_ids = set()
         random.shuffle(st.session_state.question_order)
-        unanswered_ids = st.session_state.question_order.copy()
         st.session_state.practice_index = 0
+        st.stop()  # Prevent execution on empty unanswered_ids
 
     # Current question index
     idx = unanswered_ids[st.session_state.practice_index % len(unanswered_ids)]
