@@ -23,6 +23,8 @@ def run_practice_mode(flashcards):
         st.session_state.practice_history = []
     if 'submit_answer' not in st.session_state:
         st.session_state.submit_answer = False
+    if 'has_submitted' not in st.session_state:
+        st.session_state.has_submitted = False
     if 'current_question_id' not in st.session_state:
         unanswered = [i for i in st.session_state.question_order if i not in st.session_state.answered_ids]
         st.session_state.current_question_id = unanswered[0] if unanswered else None
@@ -36,16 +38,17 @@ def run_practice_mode(flashcards):
         st.session_state.answered_ids = set()
         st.session_state.practice_history = []
         st.session_state.current_question_id = None
+        st.session_state.has_submitted = False
         random.shuffle(st.session_state.question_order)
         if os.path.exists("answered_questions.json"):
             os.remove("answered_questions.json")
         st.stop()
 
-    # Pick the current question
+    # Current question
     idx = st.session_state.current_question_id or unanswered_ids[0]
     card = flashcards[idx]
 
-    # UI
+    # Display question
     st.subheader(f"Question {len(st.session_state.answered_ids) + 1} of {total}")
     st.progress((len(st.session_state.answered_ids) + 1) / total)
     st.write(card['question'])
@@ -57,11 +60,13 @@ def run_practice_mode(flashcards):
             selected.append(key)
         st.checkbox(f"{key}. {val}", key=f"practice_{idx}_{key}")
 
+    # Submit button
     if st.button("Submit Answer") and selected:
         st.session_state.submit_answer = True
 
     if st.session_state.submit_answer:
-        st.session_state.submit_answer = False  # Reset trigger
+        st.session_state.submit_answer = False  # reset trigger
+        st.session_state.has_submitted = True
 
         correct = set(card['answers'])
         chosen = set(selected)
@@ -73,35 +78,40 @@ def run_practice_mode(flashcards):
         else:
             st.error(f"❌ Incorrect. Correct answer(s): {', '.join(correct)}")
 
-        # Save to wrong answer tracking
+        # Save wrong answers
         wrong_counts = load_wrong_answers()
         if correct != chosen:
             wrong_counts[str(idx)] = wrong_counts.get(str(idx), 0) + 1
         save_wrong_answers(wrong_counts)
 
-        # Save answered state
+        # Save progress
         st.session_state.answered_ids.add(idx)
         st.session_state.practice_history.append(idx)
         save_answered_ids(st.session_state.answered_ids)
 
-    # Navigation
+    # Navigation buttons
     col1, col2 = st.columns(2)
     with col1:
         if st.button("⬅️ Previous"):
             if st.session_state.practice_history:
                 st.session_state.current_question_id = st.session_state.practice_history.pop()
+                st.session_state.has_submitted = False  # Allow resubmission
     with col2:
         if st.button("Next ➡️"):
-            remaining = [i for i in unanswered_ids if i != idx]
-            if remaining:
-                st.session_state.practice_history.append(idx)
-                st.session_state.current_question_id = remaining[0]
+            if st.session_state.has_submitted:
+                remaining = [i for i in unanswered_ids if i != idx]
+                if remaining:
+                    st.session_state.current_question_id = remaining[0]
+                    st.session_state.has_submitted = False
+            else:
+                st.warning("⚠️ Please submit your answer before moving to the next question.")
 
-    # Reset all progress
+    # Reset progress
     if st.button("🔁 Reset Practice Progress"):
         st.session_state.answered_ids = set()
         st.session_state.practice_history = []
         st.session_state.current_question_id = None
+        st.session_state.has_submitted = False
         if os.path.exists("answered_questions.json"):
             os.remove("answered_questions.json")
         st.success("✅ Practice progress has been reset.")
