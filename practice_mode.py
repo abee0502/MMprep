@@ -16,8 +16,6 @@ def run_practice_mode(flashcards):
     # Initialize session state
     if 'answered_ids' not in st.session_state:
         st.session_state.answered_ids = load_answered_ids()
-    if 'practice_index' not in st.session_state:
-        st.session_state.practice_index = 0
     if 'question_order' not in st.session_state:
         st.session_state.question_order = list(range(total))
         random.shuffle(st.session_state.question_order)
@@ -25,22 +23,26 @@ def run_practice_mode(flashcards):
         st.session_state.practice_history = []
     if 'submit_answer' not in st.session_state:
         st.session_state.submit_answer = False
+    if 'current_question_id' not in st.session_state:
+        unanswered = [i for i in st.session_state.question_order if i not in st.session_state.answered_ids]
+        st.session_state.current_question_id = unanswered[0] if unanswered else None
 
     # Filter unanswered questions
     unanswered_ids = [i for i in st.session_state.question_order if i not in st.session_state.answered_ids]
 
+    # Handle completed session
     if not unanswered_ids and len(st.session_state.answered_ids) > 0:
         st.success("🎉 You've answered all questions! Restarting practice session.")
         st.session_state.answered_ids = set()
-        random.shuffle(st.session_state.question_order)
-        st.session_state.practice_index = 0
         st.session_state.practice_history = []
+        st.session_state.current_question_id = None
+        random.shuffle(st.session_state.question_order)
         if os.path.exists("answered_questions.json"):
             os.remove("answered_questions.json")
         st.stop()
 
-    # Current question
-    idx = unanswered_ids[st.session_state.practice_index % len(unanswered_ids)]
+    # Pick the current question
+    idx = st.session_state.current_question_id or unanswered_ids[0]
     card = flashcards[idx]
 
     # UI
@@ -71,13 +73,13 @@ def run_practice_mode(flashcards):
         else:
             st.error(f"❌ Incorrect. Correct answer(s): {', '.join(correct)}")
 
-        # Track wrong answers
+        # Save to wrong answer tracking
         wrong_counts = load_wrong_answers()
         if correct != chosen:
             wrong_counts[str(idx)] = wrong_counts.get(str(idx), 0) + 1
         save_wrong_answers(wrong_counts)
 
-        # Save progress
+        # Save answered state
         st.session_state.answered_ids.add(idx)
         st.session_state.practice_history.append(idx)
         save_answered_ids(st.session_state.answered_ids)
@@ -87,16 +89,19 @@ def run_practice_mode(flashcards):
     with col1:
         if st.button("⬅️ Previous"):
             if st.session_state.practice_history:
-                st.session_state.practice_index = max(0, st.session_state.practice_history.pop())
+                st.session_state.current_question_id = st.session_state.practice_history.pop()
     with col2:
         if st.button("Next ➡️"):
-            st.session_state.practice_index += 1
+            remaining = [i for i in unanswered_ids if i != idx]
+            if remaining:
+                st.session_state.practice_history.append(idx)
+                st.session_state.current_question_id = remaining[0]
 
-    # Reset button
+    # Reset all progress
     if st.button("🔁 Reset Practice Progress"):
         st.session_state.answered_ids = set()
-        st.session_state.practice_index = 0
         st.session_state.practice_history = []
+        st.session_state.current_question_id = None
         if os.path.exists("answered_questions.json"):
             os.remove("answered_questions.json")
         st.success("✅ Practice progress has been reset.")
