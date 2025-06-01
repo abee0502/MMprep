@@ -1,6 +1,11 @@
 import streamlit as st
 from flashcards import load_wrong_answers, save_wrong_answers
 import random
+from flashcards import (
+    load_wrong_answers, save_wrong_answers,
+    load_answered_ids, save_answered_ids
+)
+
 
 def run_practice_mode(flashcards):
     total = len(flashcards)
@@ -11,8 +16,11 @@ def run_practice_mode(flashcards):
         st.stop()
 
     # Session state initialization
+    
+    #if 'answered_ids' not in st.session_state:
+    #    st.session_state.answered_ids = set()
     if 'answered_ids' not in st.session_state:
-        st.session_state.answered_ids = set()
+        st.session_state.answered_ids = load_answered_ids()
     if 'practice_index' not in st.session_state:
         st.session_state.practice_index = 0
     if 'question_order' not in st.session_state:
@@ -35,6 +43,10 @@ def run_practice_mode(flashcards):
     card = flashcards[idx]
 
     # UI
+    #$$
+    st.session_state.answered_ids.add(idx)
+    save_answered_ids(st.session_state.answered_ids)  # <-- Save to file#$$
+    
     st.subheader(f"Question {len(st.session_state.answered_ids) + 1} of {total}")
     st.progress((len(st.session_state.answered_ids) + 1) / total)
     st.write(card['question'])
@@ -73,3 +85,12 @@ def run_practice_mode(flashcards):
     with col2:
         if st.button("Next ➡️"):
             st.session_state.practice_index += 1
+        
+    # Optional: Reset answered questions
+    if st.button("🔁 Reset Practice Progress"):
+        st.session_state.answered_ids = set()
+        st.session_state.practice_index = 0
+        if os.path.exists("answered_questions.json"):
+            os.remove("answered_questions.json")
+        st.success("✅ Practice progress has been reset.")
+        st.stop()
