@@ -23,6 +23,8 @@ def run_practice_mode(flashcards):
         random.shuffle(st.session_state.question_order)
     if 'practice_history' not in st.session_state:
         st.session_state.practice_history = []
+    if 'submit_answer' not in st.session_state:
+        st.session_state.submit_answer = False
 
     # Filter unanswered questions
     unanswered_ids = [i for i in st.session_state.question_order if i not in st.session_state.answered_ids]
@@ -33,6 +35,8 @@ def run_practice_mode(flashcards):
         random.shuffle(st.session_state.question_order)
         st.session_state.practice_index = 0
         st.session_state.practice_history = []
+        if os.path.exists("answered_questions.json"):
+            os.remove("answered_questions.json")
         st.stop()
 
     # Current question
@@ -52,6 +56,11 @@ def run_practice_mode(flashcards):
         st.checkbox(f"{key}. {val}", key=f"practice_{idx}_{key}")
 
     if st.button("Submit Answer") and selected:
+        st.session_state.submit_answer = True
+
+    if st.session_state.submit_answer:
+        st.session_state.submit_answer = False  # Reset trigger
+
         correct = set(card['answers'])
         chosen = set(selected)
 
