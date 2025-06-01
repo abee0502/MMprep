@@ -54,8 +54,9 @@ def run_practice_mode(flashcards):
 
     selected = []
     for key, val in card['options'].items():
-        if st.checkbox(f"{key}. {val}", key=f"practice_{idx}_{key}"):
+        if st.session_state.get(f"practice_{idx}_{key}", False):
             selected.append(key)
+    st.checkbox(f"{key}. {val}", key=f"practice_{idx}_{key}")
 
     if st.button("Submit Answer") and selected:
         correct = set(card['answers'])
