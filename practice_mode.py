@@ -44,30 +44,31 @@ def run_practice_mode(flashcards):
             os.remove("answered_questions.json")
         st.stop()
 
-    # ─── Navigation Buttons (no explicit rerun) ───────────────────
+    # ─── NAVIGATION BUTTONS (update state, but do NOT return) ─────
     col_prev, col_next = st.columns(2)
     with col_prev:
         if st.button("⬅️ Previous"):
             if st.session_state.practice_history:
                 # Pop the last question ID from history
-                st.session_state.current_question_id = st.session_state.practice_history.pop()
+                prev_id = st.session_state.practice_history.pop()
+                st.session_state.current_question_id = prev_id
                 st.session_state.has_submitted = False
-                return  # Return so the new state shows the previous question
 
     with col_next:
         if st.button("Next ➡️"):
             if st.session_state.has_submitted:
+                # Compute new unanswered list (since answered_ids may have changed after submission)
+                unanswered_ids = [i for i in st.session_state.question_order if i not in st.session_state.answered_ids]
                 remaining = [i for i in unanswered_ids if i != st.session_state.current_question_id]
                 if remaining:
                     # Push current into history, move to next
                     st.session_state.practice_history.append(st.session_state.current_question_id)
                     st.session_state.current_question_id = remaining[0]
                     st.session_state.has_submitted = False
-                    return  # Return so the new state shows the next question
             else:
                 st.warning("⚠️ Please submit your answer before moving to the next question.")
 
-    # ─── Display Current Question ─────────────────────────────────
+    # ─── DISPLAY CURRENT QUESTION ───────────────────────────────────
     idx = st.session_state.current_question_id
     card = flashcards[idx]
 
@@ -76,14 +77,14 @@ def run_practice_mode(flashcards):
     st.write(card['question'])
     st.markdown(f"**{card.get('instruction', '')}**")
 
-    # ─── Checkboxes ───────────────────────────────────────────────
+    # ─── CHECKBOXES ────────────────────────────────────────────────
     selected = []
     for key, val in card['options'].items():
         if st.session_state.get(f"practice_{idx}_{key}", False):
             selected.append(key)
         st.checkbox(f"{key}. {val}", key=f"practice_{idx}_{key}")
 
-    # ─── Submission Logic ─────────────────────────────────────────
+    # ─── SUBMIT LOGIC ──────────────────────────────────────────────
     if st.button("Submit Answer") and selected:
         st.session_state.submit_answer = True
 
@@ -101,18 +102,18 @@ def run_practice_mode(flashcards):
         else:
             st.error(f"❌ Incorrect. Correct answer(s): {', '.join(correct)}")
 
-        # Track wrong answers
+        # ─── Track wrong answers ────────────────────────────────────
         wrong_counts = load_wrong_answers()
         if correct != chosen:
             wrong_counts[str(idx)] = wrong_counts.get(str(idx), 0) + 1
         save_wrong_answers(wrong_counts)
 
-        # Save progress
+        # ─── Save answered state ────────────────────────────────────
         st.session_state.answered_ids.add(idx)
         st.session_state.practice_history.append(idx)
         save_answered_ids(st.session_state.answered_ids)
 
-    # ─── Reset Progress Button ─────────────────────────────────────
+    # ─── RESET PROGRESS BUTTON ─────────────────────────────────────
     if st.button("🔁 Reset Practice Progress"):
         st.session_state.answered_ids = set()
         st.session_state.practice_history = []
