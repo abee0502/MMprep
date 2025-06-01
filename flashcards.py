@@ -4,6 +4,17 @@ import os
 # File paths
 QUESTION_FILE = "questions.json"
 WRONG_ANSWER_FILE = "wrong_answers.json"
+ANSWERED_FILE = "answered_questions.json"
+
+def load_answered_ids():
+    if os.path.exists(ANSWERED_FILE):
+        with open(ANSWERED_FILE, 'r', encoding='utf-8') as f:
+            return set(json.load(f))
+    return set()
+
+def save_answered_ids(answered_ids):
+    with open(ANSWERED_FILE, 'w', encoding='utf-8') as f:
+        json.dump(list(answered_ids), f)
 
 def load_flashcards():
     """Load the list of flashcards (questions) from the JSON file."""
