@@ -1,6 +1,7 @@
 import streamlit as st
 from flashcards import load_wrong_answers, save_wrong_answers
 import random
+import os
 
 def run_review_mode(flashcards, review_only=True):
     wrong_counts = load_wrong_answers()
@@ -11,8 +12,18 @@ def run_review_mode(flashcards, review_only=True):
     sorted_wrongs = sorted(wrong_counts.items(), key=lambda x: -x[1])  # Sort by most missed
     st.subheader("❌ Mistake Review Mode" if review_only else "🎯 Wrong Answer Practice Mode")
 
+    # ✅ Add reset button in practice mode
+    if not review_only:
+        if st.button("❌ Reset All Mistake Records"):
+            if os.path.exists("wrong_answers.json"):
+                os.remove("wrong_answers.json")
+                st.success("✅ Mistake records cleared!")
+                st.experimental_rerun()
+            else:
+                st.info("ℹ️ No mistake records to reset.")
+
     if review_only:
-        # Review mode: read only
+        # Review mode: read-only view
         for qid, count in sorted_wrongs:
             idx = int(qid)
             card = flashcards[idx]
@@ -59,6 +70,7 @@ def run_review_mode(flashcards, review_only=True):
             else:
                 st.error(f"❌ Incorrect. Correct answer(s): {', '.join(correct)}")
 
+            # Re-track mistakes
             if correct != chosen:
                 wrong_counts[str(idx)] = wrong_counts.get(str(idx), 0) + 1
                 save_wrong_answers(wrong_counts)
